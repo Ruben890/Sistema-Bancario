@@ -44,6 +44,28 @@ public sealed class LoanTests
     }
 
     [Fact]
+    public void Approve_rejects_same_user_as_reviewer()
+    {
+        var userId = Guid.CreateVersion7();
+        var loan = Loan.Request(userId, 100_000, 24, "Vehicle");
+
+        var exception = Assert.Throws<DomainException>(() => loan.Approve(userId));
+
+        Assert.Equal("LOAN_SELF_REVIEW_NOT_ALLOWED", exception.Code);
+    }
+
+    [Fact]
+    public void Reject_rejects_same_user_as_reviewer()
+    {
+        var userId = Guid.CreateVersion7();
+        var loan = Loan.Request(userId, 100_000, 24, "Vehicle");
+
+        var exception = Assert.Throws<DomainException>(() => loan.Reject(userId, "Too risky"));
+
+        Assert.Equal("LOAN_SELF_REVIEW_NOT_ALLOWED", exception.Code);
+    }
+
+    [Fact]
     public void Reject_requires_reason()
     {
         var loan = Loan.Request(Guid.CreateVersion7(), 100_000, 24, "Vehicle");
