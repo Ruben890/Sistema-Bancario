@@ -37,7 +37,7 @@ La entrega cubre los requerimientos practicos del PDF:
 
 El backend sigue una arquitectura limpia:
 
-- `Domain` contiene entidades como `User` y `Loan`, enums y reglas de negocio. Esta capa no depende de frameworks.
+- `Domain` contiene entidades como `User` y `Loan`, enums, Value Objects y reglas de negocio. Esta capa no depende de frameworks.
 - `Application` contiene servicios de caso de uso, contratos e interfaces. Los services devuelven `Result<T>` para errores esperados de aplicacion.
 - `Persistence` implementa los repositorios con EF Core y PostgreSQL.
 - `Infrastructure` implementa JWT, cookies, cache, blacklist de tokens y hashing de password.
@@ -51,6 +51,8 @@ El frontend sigue una estructura separada por responsabilidad:
 - `hooks`: estado de autenticacion.
 - `services`: llamadas HTTP con `credentials: "include"`.
 - `types`: contratos TypeScript.
+
+El cliente incluye paginas para 404 y error 500. Si la API responde `500+`, el cliente redirige a `/error/500`.
 
 ## Seguridad
 

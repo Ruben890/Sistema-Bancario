@@ -66,6 +66,7 @@ Cliente HTTP:
 - `apiClient`
 - `authService`
 - `loanService`
+- `userService`
 
 Todas las llamadas usan:
 
@@ -85,6 +86,7 @@ Pantallas:
 - `AdminLoansPage`
 - `ForbiddenPage`
 - `NotFoundPage`
+- `InternalServerErrorPage`
 
 ## HTTPS en Desarrollo
 
@@ -144,8 +146,24 @@ Disponible para usuarios autenticados:
 Solo rol `Admin`:
 
 - Ver todas las solicitudes.
+- Ver nombre y email del usuario asociado a cada prestamo.
 - Aprobar prestamos pendientes.
 - Rechazar prestamos pendientes con motivo.
+
+El panel admin usa `userService` para consultar `/api/users` y mapear cada prestamo por `userId`. Asi muestra informacion legible del usuario en lugar de UUID.
+
+## Errores
+
+El cliente tiene pantallas dedicadas:
+
+- `/error/404`: ruta no encontrada.
+- `/error/500`: error interno de API.
+
+`apiClient` redirige automaticamente a `/error/500` cuando una respuesta HTTP viene con status `500` o superior.
+
+## Estados de Prestamo
+
+El backend envia `LoanStatus` como string. El cliente tambien normaliza valores numericos antiguos (`1`, `2`, `3`) para mantener compatibilidad con respuestas previas o cacheadas.
 
 ## Validaciones
 

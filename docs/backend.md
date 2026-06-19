@@ -32,6 +32,7 @@ Contiene reglas puras:
 - `UserRole`
 - `LoanStatus`
 - `DomainException`
+- Value Objects
 
 Ejemplos de reglas:
 
@@ -39,6 +40,18 @@ Ejemplos de reglas:
 - El plazo debe estar entre 1 y 120 meses.
 - Solo prestamos pendientes se pueden aprobar, rechazar, editar o eliminar.
 - Un rechazo requiere motivo.
+
+Value Objects implementados:
+
+- `UserName`
+- `Email`
+- `PasswordHash`
+- `Money`
+- `LoanTerm`
+- `LoanPurpose`
+- `RejectionReason`
+
+Estos objetos concentran validaciones e invariantes del dominio. Por ejemplo, `Money` valida monto permitido, `LoanTerm` valida el plazo, `Email` normaliza y valida correo, y `RejectionReason` valida que el rechazo tenga motivo.
 
 ### Application
 
@@ -81,6 +94,8 @@ Tablas principales:
 - `banking.users`
 - `banking.loans`
 
+Los Value Objects se persisten con conversiones explicitas de EF Core. La base de datos mantiene columnas primitivas normales como `"Email"`, `"Amount"`, `"TermInMonths"` y `"Purpose"`, pero el dominio trabaja con tipos ricos.
+
 ### Infrastructure
 
 Implementa detalles tecnicos:
@@ -107,6 +122,8 @@ Contiene:
 - `DatabaseBootstrapper`
 
 Los controllers devuelven `new ObjectResult(result)` y el filtro aplica el status code que viene en `Result<T>`.
+
+La API configura `JsonStringEnumConverter`, por lo que enums como `LoanStatus` se serializan como `"Pending"`, `"Approved"` y `"Rejected"` en lugar de numeros.
 
 ## Autenticacion
 
