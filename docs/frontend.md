@@ -57,7 +57,7 @@ Define middlewares de rutas:
 - `PublicOnlyRoute`: evita que usuarios autenticados vuelvan a login/register.
 - Autorizacion por rol con `roles={["Admin"]}`.
 
-Este concepto fue tomado del patron de Fligo: validar auth, mostrar pending mientras carga y redirigir segun estado/rol.
+validar auth, mostrar pending mientras carga y redirigir segun estado/rol.
 
 ### services
 
