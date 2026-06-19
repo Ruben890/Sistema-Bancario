@@ -25,9 +25,17 @@ export interface User {
   isActive: boolean;
 }
 
+export interface LoanUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
 export interface Loan {
   id: string;
   userId: string;
+  user: LoanUser | null;
   amount: number;
   termInMonths: number;
   purpose: string;

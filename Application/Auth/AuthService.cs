@@ -10,7 +10,9 @@ public sealed class AuthService(
     IUserRepository users,
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
+    IJwtTokenBlacklist jwtTokenBlacklist,
     IAuthCookieService authCookieService,
+    TokenInfo tokenInfo,
     IUnitOfWork unitOfWork) : IAuthService
 {
     public async Task<Result<object>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
@@ -67,5 +69,23 @@ public sealed class AuthService(
             new AuthResponse(user.Id, user.Name.Value, user.Email.Value, user.Role.ToString(), string.Empty),
             "Authenticated user retrieved successfully.",
             HttpStatusCode.OK);
+    }
+
+    public Result<object> Logout()
+    {
+        if (string.IsNullOrWhiteSpace(tokenInfo.UserId) ||
+            string.IsNullOrWhiteSpace(tokenInfo.Jti) ||
+            !tokenInfo.Expiration.HasValue)
+        {
+            return Result<object>.Failure(
+                "TOKEN_INVALID",
+                "Token data is invalid.",
+                HttpStatusCode.BadRequest);
+        }
+
+        jwtTokenBlacklist.LogoutToken(tokenInfo.UserId, tokenInfo.Jti, tokenInfo.Expiration.Value);
+        authCookieService.ClearAccessToken();
+
+        return Result<object>.Response("Logout completed successfully.", HttpStatusCode.OK);
     }
 }

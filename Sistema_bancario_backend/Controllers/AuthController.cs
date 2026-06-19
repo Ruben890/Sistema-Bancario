@@ -1,7 +1,4 @@
-using System.Net;
-using Application.Abstractions;
 using Application.Auth;
-using Application.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,8 +8,6 @@ namespace Sistema_bancario_backend.Controllers;
 [Route("api/auth")]
 public sealed class AuthController(
     IAuthService authService,
-    IJwtTokenBlacklist jwtTokenBlacklist,
-    IAuthCookieService authCookieService,
     TokenInfo tokenInfo) : ControllerBase
 {
     [HttpPost("register")]
@@ -45,19 +40,7 @@ public sealed class AuthController(
     [HttpPost("logout")]
     public IActionResult Logout()
     {
-        if (string.IsNullOrWhiteSpace(tokenInfo.UserId) ||
-            string.IsNullOrWhiteSpace(tokenInfo.Jti) ||
-            !tokenInfo.Expiration.HasValue)
-        {
-            return new ObjectResult(Result<object>.Failure(
-                "TOKEN_INVALID",
-                "Token data is invalid.",
-                HttpStatusCode.BadRequest));
-        }
-
-        jwtTokenBlacklist.LogoutToken(tokenInfo.UserId, tokenInfo.Jti, tokenInfo.Expiration.Value);
-        authCookieService.ClearAccessToken();
-
-        return new ObjectResult(Result<object>.Response("Logout completed successfully.", HttpStatusCode.OK));
+        var result = authService.Logout();
+        return new ObjectResult(result);
     }
 }

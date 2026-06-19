@@ -10,17 +10,21 @@ public sealed class LoanRepository(BankingDbContext context) : ILoanRepository
 {
     public async Task<IReadOnlyList<Loan>> GetAllAsync(CancellationToken cancellationToken)
         => await context.Loans
+            .Include(loan => loan.User)
             .OrderByDescending(loan => loan.CreatedAt)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<Loan>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken)
         => await context.Loans
+            .Include(loan => loan.User)
             .Where(loan => loan.UserId == userId)
             .OrderByDescending(loan => loan.CreatedAt)
             .ToListAsync(cancellationToken);
 
     public Task<Loan?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
-        => context.Loans.FirstOrDefaultAsync(loan => loan.Id == id, cancellationToken);
+        => context.Loans
+            .Include(loan => loan.User)
+            .FirstOrDefaultAsync(loan => loan.Id == id, cancellationToken);
 
     public Task<LoanStatus?> GetStatusAsync(Guid id, CancellationToken cancellationToken)
         => context.Loans

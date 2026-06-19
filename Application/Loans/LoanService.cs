@@ -12,28 +12,50 @@ public sealed class LoanService(
     ILoanStatusCache loanStatusCache,
     IUnitOfWork unitOfWork) : ILoanService
 {
-    public async Task<Result<IReadOnlyList<LoanResponse>>> GetAllAsync(CancellationToken cancellationToken)
-        => Result<IReadOnlyList<LoanResponse>>.Response(
-            (await loans.GetAllAsync(cancellationToken)).Select(ToResponse).ToList(),
-            "Loans retrieved successfully.",
-            HttpStatusCode.OK);
-
-    public async Task<Result<IReadOnlyList<LoanResponse>>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken)
-        => Result<IReadOnlyList<LoanResponse>>.Response(
-            (await loans.GetByUserIdAsync(userId, cancellationToken)).Select(ToResponse).ToList(),
-            "Loans retrieved successfully.",
-            HttpStatusCode.OK);
-
-    public async Task<Result<LoanResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyList<LoanResponse>>> GetVisibleAsync(
+        Guid currentUserId,
+        string? currentRole,
+        CancellationToken cancellationToken)
     {
-        var loan = await loans.GetByIdAsync(id, cancellationToken);
-        return loan is null
-            ? Result<LoanResponse>.Failure("LOAN_NOT_FOUND", "Loan was not found.", HttpStatusCode.BadRequest)
-            : Result<LoanResponse>.Response(ToResponse(loan), "Loan retrieved successfully.", HttpStatusCode.OK);
+        var visibleLoans = IsAdmin(currentRole)
+            ? await loans.GetAllAsync(cancellationToken)
+            : await loans.GetByUserIdAsync(currentUserId, cancellationToken);
+
+        return Result<IReadOnlyList<LoanResponse>>.Response(
+            visibleLoans.Select(loan => ToResponse(loan)).ToList(),
+            "Loans retrieved successfully.",
+            HttpStatusCode.OK);
     }
 
-    public async Task<Result<object>> GetStatusAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<Result<LoanResponse>> GetByIdAsync(
+        Guid id,
+        Guid currentUserId,
+        string? currentRole,
+        CancellationToken cancellationToken)
     {
+        var loan = await loans.GetByIdAsync(id, cancellationToken);
+        if (loan is null)
+            return Result<LoanResponse>.Failure("LOAN_NOT_FOUND", "Loan was not found.", HttpStatusCode.BadRequest);
+
+        if (!CanAccess(loan.UserId, currentUserId, currentRole))
+            return AccessDenied<LoanResponse>();
+
+        return Result<LoanResponse>.Response(ToResponse(loan), "Loan retrieved successfully.", HttpStatusCode.OK);
+    }
+
+    public async Task<Result<object>> GetStatusAsync(
+        Guid id,
+        Guid currentUserId,
+        string? currentRole,
+        CancellationToken cancellationToken)
+    {
+        var loan = await loans.GetByIdAsync(id, cancellationToken);
+        if (loan is null)
+            return Result<object>.Failure("LOAN_NOT_FOUND", "Loan was not found.", HttpStatusCode.BadRequest);
+
+        if (!CanAccess(loan.UserId, currentUserId, currentRole))
+            return AccessDenied<object>();
+
         var status = await loanStatusCache.GetOrCreateAsync(
             id,
             () => loans.GetStatusAsync(id, cancellationToken));
@@ -47,8 +69,15 @@ public sealed class LoanService(
             HttpStatusCode.OK);
     }
 
-    public async Task<Result<LoanResponse>> CreateAsync(CreateLoanRequest request, CancellationToken cancellationToken)
+    public async Task<Result<LoanResponse>> CreateAsync(
+        CreateLoanRequest request,
+        Guid currentUserId,
+        string? currentRole,
+        CancellationToken cancellationToken)
     {
+        if (!CanAccess(request.UserId, currentUserId, currentRole))
+            return AccessDenied<LoanResponse>();
+
         var user = await users.GetByIdAsync(request.UserId, cancellationToken);
         if (user is null || !user.IsActive)
             return Result<LoanResponse>.Failure(
@@ -61,14 +90,22 @@ public sealed class LoanService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
         loanStatusCache.Set(loan.Id, loan.Status);
 
-        return Result<LoanResponse>.Response(ToResponse(loan), "Loan requested successfully.", HttpStatusCode.Created);
+        return Result<LoanResponse>.Response(ToResponse(loan, user), "Loan requested successfully.", HttpStatusCode.Created);
     }
 
-    public async Task<Result<LoanResponse>> UpdateAsync(Guid id, UpdateLoanRequest request, CancellationToken cancellationToken)
+    public async Task<Result<LoanResponse>> UpdateAsync(
+        Guid id,
+        UpdateLoanRequest request,
+        Guid currentUserId,
+        string? currentRole,
+        CancellationToken cancellationToken)
     {
         var loan = await loans.GetByIdAsync(id, cancellationToken);
         if (loan is null)
             return Result<LoanResponse>.Failure("LOAN_NOT_FOUND", "Loan was not found.", HttpStatusCode.BadRequest);
+
+        if (!CanAccess(loan.UserId, currentUserId, currentRole))
+            return AccessDenied<LoanResponse>();
 
         loan.UpdateRequest(request.Amount, request.TermInMonths, request.Purpose);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -77,8 +114,15 @@ public sealed class LoanService(
         return Result<LoanResponse>.Response(ToResponse(loan), "Loan updated successfully.", HttpStatusCode.OK);
     }
 
-    public async Task<Result<LoanResponse>> ApproveAsync(Guid id, Guid adminUserId, CancellationToken cancellationToken)
+    public async Task<Result<LoanResponse>> ApproveAsync(
+        Guid id,
+        Guid adminUserId,
+        string? currentRole,
+        CancellationToken cancellationToken)
     {
+        if (!IsAdmin(currentRole))
+            return AccessDenied<LoanResponse>();
+
         Loan? reviewedLoan = null;
 
         await unitOfWork.ExecuteInTransactionAsync(async ct =>
@@ -102,9 +146,13 @@ public sealed class LoanService(
     public async Task<Result<LoanResponse>> RejectAsync(
         Guid id,
         Guid adminUserId,
+        string? currentRole,
         RejectLoanRequest request,
         CancellationToken cancellationToken)
     {
+        if (!IsAdmin(currentRole))
+            return AccessDenied<LoanResponse>();
+
         Loan? reviewedLoan = null;
 
         await unitOfWork.ExecuteInTransactionAsync(async ct =>
@@ -125,11 +173,18 @@ public sealed class LoanService(
         return Result<LoanResponse>.Response(ToResponse(reviewedLoan!), "Loan rejected successfully.", HttpStatusCode.OK);
     }
 
-    public async Task<Result<object>> DeleteAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<Result<object>> DeleteAsync(
+        Guid id,
+        Guid currentUserId,
+        string? currentRole,
+        CancellationToken cancellationToken)
     {
         var loan = await loans.GetByIdAsync(id, cancellationToken);
         if (loan is null)
             return Result<object>.Failure("LOAN_NOT_FOUND", "Loan was not found.", HttpStatusCode.BadRequest);
+
+        if (!CanAccess(loan.UserId, currentUserId, currentRole))
+            return AccessDenied<object>();
 
         if (loan.Status != LoanStatus.Pending)
             return Result<object>.Failure(
@@ -144,10 +199,26 @@ public sealed class LoanService(
         return Result<object>.Response("Loan deleted successfully.", HttpStatusCode.OK);
     }
 
-    private static LoanResponse ToResponse(Loan loan)
-        => new(
+    private static bool CanAccess(Guid ownerUserId, Guid currentUserId, string? currentRole)
+        => IsAdmin(currentRole) || ownerUserId == currentUserId;
+
+    private static bool IsAdmin(string? role)
+        => string.Equals(role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+    private static Result<T> AccessDenied<T>()
+        => Result<T>.Failure(
+            "LOAN_ACCESS_DENIED",
+            "You cannot access this loan.",
+            HttpStatusCode.Forbidden);
+
+    private static LoanResponse ToResponse(Loan loan, User? user = null)
+    {
+        user ??= loan.User;
+
+        return new LoanResponse(
             loan.Id,
             loan.UserId,
+            ToUserResponse(user),
             loan.Amount.Amount,
             loan.Term.Months,
             loan.Purpose.Value,
@@ -155,4 +226,10 @@ public sealed class LoanService(
             loan.ReviewedByUserId,
             loan.ReviewedAt,
             loan.RejectionReason?.Value);
+    }
+
+    private static LoanUserResponse? ToUserResponse(User? user)
+        => user is null
+            ? null
+            : new LoanUserResponse(user.Id, user.Name.Value, user.Email.Value, user.Role);
 }

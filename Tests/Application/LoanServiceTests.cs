@@ -18,8 +18,8 @@ public sealed class LoanServiceTests
         var cache = new InMemoryLoanStatusCache();
         var service = new LoanService(loanRepository, userRepository, cache, new NoOpUnitOfWork());
 
-        var first = await service.GetStatusAsync(loan.Id, CancellationToken.None);
-        var second = await service.GetStatusAsync(loan.Id, CancellationToken.None);
+        var first = await service.GetStatusAsync(loan.Id, user.Id, UserRole.Customer.ToString(), CancellationToken.None);
+        var second = await service.GetStatusAsync(loan.Id, user.Id, UserRole.Customer.ToString(), CancellationToken.None);
 
         Assert.NotNull(first.Entity);
         Assert.NotNull(second.Entity);

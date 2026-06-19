@@ -43,7 +43,9 @@ public static class ServiceCollectionExtensions
                     ClockSkew = TimeSpan.Zero,
                     ValidIssuer = jwtOptions.Issuer,
                     ValidAudience = jwtOptions.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+                    NameClaimType = "userId",
+                    RoleClaimType = "role"
                 };
                 options.Events = new JwtBearerEvents
                 {

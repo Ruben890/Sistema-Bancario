@@ -4,6 +4,14 @@ import { BrandMark } from "../assets/brand";
 import { resetAuthCache } from "../hooks/authSessionCache";
 import { useAuth } from "../hooks/useAuth";
 import { authService } from "../services/authService";
+import type { UserRole } from "../types/api";
+
+const roleLabels: Record<UserRole, string> = {
+  Admin: "Administrador",
+  Customer: "Cliente"
+};
+
+const getRoleLabel = (role: UserRole | undefined) => role ? roleLabels[role] : "";
 
 export const AppShell = () => {
   const { user } = useAuth();
@@ -22,7 +30,7 @@ export const AppShell = () => {
           <BrandMark />
           <div>
             <strong>Sistema Bancario</strong>
-            <span>{user?.role === "Admin" ? "Administracion" : "Cliente"}</span>
+            <span>{getRoleLabel(user?.role)}</span>
           </div>
         </div>
 
@@ -51,7 +59,7 @@ export const AppShell = () => {
             <span>Sesion activa</span>
             <strong>{user?.name}</strong>
           </div>
-          <span className="role-pill">{user?.role}</span>
+          <span className="role-pill">{getRoleLabel(user?.role)}</span>
         </header>
         <Outlet />
       </section>

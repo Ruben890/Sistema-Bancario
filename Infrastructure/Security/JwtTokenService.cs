@@ -19,17 +19,14 @@ public sealed class JwtTokenService(
         if (string.IsNullOrWhiteSpace(_options.Key) || _options.Key.Length < 32)
             throw new InvalidOperationException("Jwt:Key must contain at least 32 characters.");
 
-        var jti = Guid.NewGuid().ToString();
         var expires = DateTime.UtcNow.AddMinutes(_options.ExpirationMinutes);
+        var jti = Guid.NewGuid().ToString();
 
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Jti, jti),
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Email, user.Email.Value),
-            new(ClaimTypes.Name, user.Name.Value),
-            new(ClaimTypes.Role, user.Role.ToString())
+            new("userId", user.Id.ToString()),
+            new("role", user.Role.ToString()),
+            new(JwtRegisteredClaimNames.Jti, jti)
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Key));

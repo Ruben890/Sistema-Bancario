@@ -8,6 +8,7 @@ public sealed class Loan : EntityBase
 {
     private Loan()
     {
+        User = null!;
         Amount = null!;
         Term = null!;
         Purpose = null!;
@@ -17,6 +18,7 @@ public sealed class Loan : EntityBase
     {
         Id = Guid.CreateVersion7();
         CreatedAt = DateTime.UtcNow;
+        User = null!;
         UserId = userId == Guid.Empty
             ? throw new DomainException("LOAN_USER_REQUIRED", "A loan must be linked to a user.")
             : userId;
@@ -27,6 +29,7 @@ public sealed class Loan : EntityBase
     }
 
     public Guid UserId { get; private set; }
+    public User User { get; private set; }
     public Money Amount { get; private set; }
     public LoanTerm Term { get; private set; }
     public LoanPurpose Purpose { get; private set; }
@@ -50,7 +53,7 @@ public sealed class Loan : EntityBase
     public void Approve(Guid adminUserId)
     {
         EnsurePending();
-        EnsureReviewer(adminUserId);
+        EnsureReviewer(adminUserId, UserId);
 
         Status = LoanStatus.Approved;
         ReviewedByUserId = adminUserId;
@@ -62,7 +65,7 @@ public sealed class Loan : EntityBase
     public void Reject(Guid adminUserId, string reason)
     {
         EnsurePending();
-        EnsureReviewer(adminUserId);
+        EnsureReviewer(adminUserId, UserId);
 
         Status = LoanStatus.Rejected;
         ReviewedByUserId = adminUserId;
@@ -77,9 +80,12 @@ public sealed class Loan : EntityBase
             throw new DomainException("LOAN_ALREADY_REVIEWED", "Only pending loans can be changed.");
     }
 
-    private static void EnsureReviewer(Guid adminUserId)
+    private static void EnsureReviewer(Guid adminUserId, Guid ownerUserId)
     {
         if (adminUserId == Guid.Empty)
             throw new DomainException("LOAN_REVIEWER_REQUIRED", "A loan review requires an administrator.");
+
+        if (adminUserId == ownerUserId)
+            throw new DomainException("LOAN_SELF_REVIEW_NOT_ALLOWED", "A loan must be reviewed by another administrator.");
     }
 }

@@ -43,7 +43,7 @@ public sealed class LoanConfiguration : IEntityTypeConfiguration<Loan>
         builder.HasIndex(loan => loan.UserId);
         builder.HasIndex(loan => loan.Status);
 
-        builder.HasOne<User>()
+        builder.HasOne(loan => loan.User)
             .WithMany()
             .HasForeignKey(loan => loan.UserId)
             .OnDelete(DeleteBehavior.Restrict);

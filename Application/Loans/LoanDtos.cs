@@ -2,9 +2,12 @@ using Domain.Enums;
 
 namespace Application.Loans;
 
+public sealed record LoanUserResponse(Guid Id, string Name, string Email, UserRole Role);
+
 public sealed record LoanResponse(
     Guid Id,
     Guid UserId,
+    LoanUserResponse? User,
     decimal Amount,
     int TermInMonths,
     string Purpose,

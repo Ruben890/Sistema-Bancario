@@ -434,9 +434,8 @@ textarea:focus {
 }
 
 .loan-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
+  display: grid;
+  gap: 10px;
 }
 
 .loan-row strong,
@@ -448,12 +447,48 @@ textarea:focus {
   display: block;
 }
 
+.loan-row-main {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.loan-row-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.loan-row-title strong {
+  min-width: 0;
+  font-size: 18px;
+}
+
+.loan-row-title .status-badge {
+  flex: 0 0 auto;
+}
+
+.loan-meta {
+  display: flex;
+  gap: 8px 18px;
+  flex-wrap: wrap;
+}
+
+.loan-rejection {
+  width: fit-content;
+  border-radius: 7px;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  color: #b42318;
+  padding: 7px 9px;
+}
+
 .loan-row span,
 .loan-main span,
 .loan-main small,
 .loan-row small {
   color: #667085;
-  margin-top: 4px;
 }
 
 .admin-loan-row {
@@ -485,9 +520,22 @@ textarea:focus {
 }
 
 .reviewed-text,
+.self-review-note,
 .empty-state {
   color: #667085;
   font-weight: 700;
+}
+
+.self-review-note {
+  justify-self: end;
+  max-width: 220px;
+  border-radius: 7px;
+  background: #eef4ff;
+  border: 1px solid #c7d7fe;
+  color: #3538cd;
+  padding: 9px 11px;
+  text-align: center;
+  line-height: 1.35;
 }
 
 .status-pending {
@@ -585,6 +633,11 @@ textarea:focus {
   .admin-actions {
     justify-content: start;
   }
+
+  .self-review-note {
+    justify-self: start;
+    max-width: none;
+  }
 }
 
 @media (max-width: 560px) {
@@ -597,6 +650,11 @@ textarea:focus {
   .topbar,
   .loan-row {
     align-items: stretch;
+    flex-direction: column;
+  }
+
+  .loan-row-title {
+    align-items: start;
     flex-direction: column;
   }
 

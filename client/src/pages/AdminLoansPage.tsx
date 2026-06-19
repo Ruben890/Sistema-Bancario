@@ -3,14 +3,14 @@ import { ClipboardList, FileX2, ShieldCheck } from "lucide-react";
 import { StatCard } from "../components/StatCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { Toast } from "../components/Toast";
+import { useAuth } from "../hooks/useAuth";
 import { ApiError } from "../services/apiClient";
 import { loanService } from "../services/loanService";
-import { userService } from "../services/userService";
-import type { Loan, User } from "../types/api";
+import type { Loan } from "../types/api";
 
 export const AdminLoansPage = () => {
+  const { user } = useAuth();
   const [loans, setLoans] = useState<Loan[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [rejectingLoanId, setRejectingLoanId] = useState<string | null>(null);
@@ -23,21 +23,12 @@ export const AdminLoansPage = () => {
     rejected: loans.filter((loan) => loan.status === "Rejected").length
   }), [loans]);
 
-  const usersById = useMemo(() => {
-    return new Map(users.map((user) => [user.id, user]));
-  }, [users]);
-
   const loadLoans = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [loansResult, usersResult] = await Promise.all([
-        loanService.list(),
-        userService.list()
-      ]);
-
+      const loansResult = await loanService.list();
       setLoans(loansResult.entity ?? []);
-      setUsers(usersResult.entity ?? []);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudieron cargar los prestamos.");
     } finally {
@@ -110,53 +101,59 @@ export const AdminLoansPage = () => {
           <p className="empty-state">No hay prestamos registrados.</p>
         ) : (
           <div className="admin-table">
-            {loans.map((loan) => (
-              <article className="admin-loan-row" key={loan.id}>
-                <div className="loan-main">
-                  <strong>RD$ {loan.amount.toLocaleString()}</strong>
-                  <span>{loan.termInMonths} meses - {loan.purpose}</span>
-                  <small>
-                    Usuario: {usersById.get(loan.userId)?.name ?? "Usuario no encontrado"}
-                  </small>
-                  <small>
-                    Email: {usersById.get(loan.userId)?.email ?? "No disponible"}
-                  </small>
-                </div>
+            {loans.map((loan) => {
+              const isOwnLoan = loan.userId === user?.userId;
 
-                <StatusBadge status={loan.status} />
-
-                {loan.status === "Pending" ? (
-                  <div className="admin-actions">
-                    <button className="approve-button" type="button" onClick={() => approve(loan.id)}>
-                      Aprobar
-                    </button>
-                    <button className="reject-button" type="button" onClick={() => setRejectingLoanId(loan.id)}>
-                      Rechazar
-                    </button>
+              return (
+                <article className="admin-loan-row" key={loan.id}>
+                  <div className="loan-main">
+                    <strong>RD$ {loan.amount.toLocaleString()}</strong>
+                    <span>{loan.termInMonths} meses - {loan.purpose}</span>
+                    <small>
+                      Usuario: {loan.user?.name ?? "Usuario no encontrado"}
+                    </small>
+                    <small>
+                      Email: {loan.user?.email ?? "No disponible"}
+                    </small>
                   </div>
-                ) : (
-                  <span className="reviewed-text">Revisado</span>
-                )}
 
-                {rejectingLoanId === loan.id && (
-                  <div className="reject-box">
-                    <textarea
-                      value={rejectionReason}
-                      onChange={(event) => setRejectionReason(event.target.value)}
-                      rows={3}
-                    />
-                    <div>
-                      <button className="reject-button" type="button" onClick={() => reject(loan.id)}>
-                        Confirmar rechazo
+                  <StatusBadge status={loan.status} />
+
+                  {loan.status === "Pending" && isOwnLoan ? (
+                    <span className="self-review-note">Espera validacion de otro admin</span>
+                  ) : loan.status === "Pending" ? (
+                    <div className="admin-actions">
+                      <button className="approve-button" type="button" onClick={() => approve(loan.id)}>
+                        Aprobar
                       </button>
-                      <button className="ghost-button" type="button" onClick={() => setRejectingLoanId(null)}>
-                        Cancelar
+                      <button className="reject-button" type="button" onClick={() => setRejectingLoanId(loan.id)}>
+                        Rechazar
                       </button>
                     </div>
-                  </div>
-                )}
-              </article>
-            ))}
+                  ) : (
+                    <span className="reviewed-text">Revisado</span>
+                  )}
+
+                  {rejectingLoanId === loan.id && (
+                    <div className="reject-box">
+                      <textarea
+                        value={rejectionReason}
+                        onChange={(event) => setRejectionReason(event.target.value)}
+                        rows={3}
+                      />
+                      <div>
+                        <button className="reject-button" type="button" onClick={() => reject(loan.id)}>
+                          Confirmar rechazo
+                        </button>
+                        <button className="ghost-button" type="button" onClick={() => setRejectingLoanId(null)}>
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

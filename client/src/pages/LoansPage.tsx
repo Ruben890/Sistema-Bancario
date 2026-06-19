@@ -133,7 +133,7 @@ export const LoansPage = () => {
 
         <section className="panel">
           <div className="panel-heading">
-            <h2>Mis prestamos</h2>
+            <h2>Prestamos solicitados</h2>
             <button className="ghost-button" type="button" onClick={loadLoans}>Actualizar</button>
           </div>
 
@@ -145,12 +145,23 @@ export const LoansPage = () => {
             <div className="loan-list">
               {loans.map((loan) => (
                 <article className="loan-row" key={loan.id}>
-                  <div>
-                    <strong>RD$ {loan.amount.toLocaleString()}</strong>
+                  <div className="loan-row-main">
+                    <div className="loan-row-title">
+                      <strong>RD$ {loan.amount.toLocaleString()}</strong>
+                      <StatusBadge status={loan.status} />
+                    </div>
+
                     <span>{loan.termInMonths} meses - {loan.purpose}</span>
-                    {loan.rejectionReason && <small>Motivo: {loan.rejectionReason}</small>}
+
+                    <div className="loan-meta">
+                      <small>Solicitado por: {loan.user?.name ?? "Usuario no encontrado"}</small>
+                      <small>Email: {loan.user?.email ?? "No disponible"}</small>
+                    </div>
+
+                    {loan.rejectionReason && (
+                      <small className="loan-rejection">Motivo: {loan.rejectionReason}</small>
+                    )}
                   </div>
-                  <StatusBadge status={loan.status} />
                 </article>
               ))}
             </div>
